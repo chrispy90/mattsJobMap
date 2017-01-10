@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <title>Matt's Mapping Project</title>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="https://npmcdn.com/@turf/turf@3.5.1/turf.min.js"></script>
+
+     <!-- Load Esri Leaflet from CDN -->
+    <script src="https://unpkg.com/esri-leaflet@2.0.4"></script>
+
+    <!-- Esri Leaflet Geocoder -->
+    <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder@2.2.1/dist/esri-leaflet-geocoder.css">
+    <script src="https://unpkg.com/esri-leaflet-geocoder@2.2.1"></script>
+
+
+    <style>/* Styles */
+      html,body {
+      height:100%;
+      margin:0;
+        }
+
+        .content {
+          height:100%;
+          min-height:100%;/*for mozilla*/
+        }
+
+        html>body .content {
+          height:auto;
+        }
+
+        a{
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #B5121B;
+        }
+
+
+        #main {
+            width: 100%; 
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: black
+        }
+
+        .info {
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        .info h4 {
+            margin: 0 0 5px;
+            color: #777;
+        }
+
+        section {
+            width: 100%;
+            height: 100%;
+            background: black;
+            margin: auto;
+            padding: 10px;
+        }
+        #sidePane {
+            width: 20%;
+            height: 100%;
+            background: black;
+            float: left;
+        }
+        #map {
+            margin-left: 20%;
+            height: 100%;
+            background: black;
+        }
+
+        .ResultsTitle{
+            color: #B5121B;
+            font-weight: bold;
+            font-size: 16pt;
+            text-align: center;
+        }
+
+        .ResultsText{
+            color: white;
+            font-size: 12pt;
+        }
+
+        .leaflet-popup-content-wrapper {
+          background-color: #000
+        }
+
+    </style>
+
+    
+</head>
+<body>
+
+<section>
+    <div id="sidePane" class="ResultsTitle">
+        <a href="https://www.fandr.com/" target="_blank">
+            <img src="f-and-r-logo.png" style="border:1px solid black;max-width:100%;">
+        </a>
+        <br>RFP Locator
+        <div id="results" class="ResultsText">
+            
+        </div>
+    </div>
+
+    <div id='map'></div>
+</section>
+
+<script>
+    var map = L.map('map').setView([39.048840, -78.105121], 7);
+
+    L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        id: 'mapbox.light'
+    }).addTo(map);
+
+    // States
+    geojson = L.geoJson(geojson, {
+        style: style,
+        onEachFeature: onEachFeature
+    }).addTo(map);
+
+    function addDataToMap(data, map) {
+    var geojson = L.geoJson(data, {style: style, onEachFeature: onEachFeature});
+    geojson.addTo(map);
+    };
+
+    // geojsons of the states
+    $.getJSON('vaCounties.geojson', function(data) { addDataToMap(data, map); });
+
+    $.getJSON('mdCounties.geojson', function(data) { addDataToMap(data, map); });
+
+    $.getJSON('deCounties.geojson', function(data) { addDataToMap(data, map); });
+
+    $.getJSON('dcCounties.geojson', function(data) { addDataToMap(data, map); });
+
+    $.getJSON('paCounties.geojson', function(data) { addDataToMap(data, map); });
+
+
+    // create the geocoding control and add it to the map
+    var searchControl = L.esri.Geocoding.geosearch().addTo(map);
+   
+
+    // Location Markers
+    var coords = [[37.603165, -77.488890],[38.983822, -77.478135],[36.761533, -76.235482],[39.478281, -76.644300], [37.304200, -79.901601],[39.156739, -76.779298],[38.256723, -77.506815]]
+    var locations = ["Corporate","Dulles","Chesapeake","Hunt Valley", "Roanoke", "Jessup", "Fredericksburg"]
+
+    for (var i = coords.length - 1; i >= 0; i--) {
+        incoords = coords[i]
+        inlocation = locations[i]
+        if (inlocation == "Dulles") {
+            var FR_Locations = L.marker(incoords).addTo(map);
+            FR_Locations.bindPopup('<img src= "mattPic.jpg" style="width:170px;height:256px;"/>');
+            FR_Locations.bindTooltip(inlocation).fire();
+        }else{
+            var FR_Locations = L.marker(incoords).addTo(map);
+            FR_Locations.bindTooltip(inlocation).fire();
+        
+        };
+        
+        
+    }
+      
+
+
+    // control that shows state info on hover
+    var info = L.control();
+
+    info.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info');
+        this.update();
+        return this._div;
+    };
+
+    info.update = function (props) {
+        this._div.innerHTML = '<h4>Current County</h4>' +  (props ?
+            '<b>' + props.name 
+            : 'Hover over a county');
+    };
+
+    info.addTo(map);
+
+
+    function style(feature) {
+    return {
+        fillColor: '#800026',
+        weight: 2,
+        opacity: 1,
+        color: 'white',
+        dashArray: '2',
+        fillOpacity: 0.25
+        };
+    }   
+
+    function highlightFeature(e) {
+        var layer = e.target;
+
+        layer.setStyle({
+            weight: 3,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.6
+        });
+
+        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+            layer.bringToFront();
+        }
+
+        info.update(layer.feature.properties);
+    }
+
+    var geojson;
+
+    function resetHighlight(e) {
+        geojson.resetStyle(e.target);
+        info.update();
+    }
+
+    // Statewide RFP sites
+    var vaRFPs = {"Port Authority":"http://www.portofvirginia.com/about/policies/procurement/",
+                  "VDOT": "http://www.virginiadot.org/business/rfps.asp"}
+
+    var mdRFPs = {"Port Authority":"http://www.mpa.maryland.gov/content/solicitations.php",
+                  "MDOT":"http://www.michigan.gov/mdot/0,1607,7-151-9625_32842---,00.html"}
+
+    var paRFPs = {"PA eMarketplace":"http://www.emarketplace.state.pa.us/"}
+
+    var deRFPs = {"Delaware River Port Authority":"http://www.drpa.org/business/bids.asp"}
+
+    var dcRFPs = {"Office of Contracting and Procurement":"http://app.ocp.dc.gov/RUI/information/scf/SolNumRespond.asp"}
+
+    var subRFPS
+
+    // Updates the sidebar with the currently selected state
+    function updateResults(e){
+        var layer = e.target;
+
+        var stateAbb 
+
+        var countyName
+
+        var statewide
+
+
+        var clickedVal = (layer.feature.properties);
+
+        if (clickedVal.name.slice(-2) == "VA") {
+            stateAbb = "Virginia"
+            statewide = vaRFPs
+            
+
+        } else if(clickedVal.name.slice(-2) == "MD"){
+            stateAbb = "Maryland"
+            statewide = mdRFPs
+            
+
+        } else if(clickedVal.name.slice(-2) == "DC"){
+            stateAbb = "Washington DC"
+            statewide = dcRFPs
+            
+
+        } else if(clickedVal.name.slice(-2) == "DE"){
+            stateAbb = "Delaware"
+            statewide = deRFPs
+            
+
+        } else if(clickedVal.name.slice(-2) == "PA"){
+            stateAbb = "Pennsylvania"
+            statewide = paRFPs
+            
+        };
+
+        countyName = clickedVal.name.substring(0, clickedVal.name.length - 4);
+
+        // Function to populate statewide RFP sites
+        var list = '<ul style="text-align: left;">'   
+        var newlink
+        Object.keys(statewide).forEach(function(key) { 
+            newlink = '<a href="'+ statewide[key] +'"target="_blank">'+key+'</a>' 
+            list += '<li>' + newlink + '</li>';   
+        });
+        list += '</ul>'
+
+        var vaJSON = [{"County":"Fauquier County","SiteName":"County Website","link":"http://www.fauquiercounty.gov/government/departments-h-z/procurement/bids-proposals"},
+        {"County":"Fairfax County","SiteName":"Fairfax County Government","link":"http://www.fairfaxcounty.gov/solicitation/"},
+        {"County":"Fairfax County","SiteName":"PPEA","link":"http://www.fairfaxcounty.gov/dpmm/solic2.htm#ppea"},
+        {"County":"Fairfax County","SiteName":"Design Consultant Contracts Public Works & Environmental Services","link":"http://www.fairfaxcounty.gov/dpwes/construction/designadvert.htm"},
+        {"County":"City of Alexandria","SiteName":"City of Alexandria ","link":"https://eprocure.alexandriava.gov/bso/external/publicBids.sdo"},
+        {"County":"City of Alexandria","SiteName":"Alexandria City Public Schools","link":"http://www.acps.k12.va.us/financial-services/purchasing/bids.php"},
+        {"County":"Stafford County","SiteName":"County Website","link":"http://staffordcountyva.gov/Bids.aspx?CatID=23"},
+        {"County":"Loudoun County","SiteName":"County Website","link":"https://www.loudoun.gov/Bids.aspx"},
+        {"County":"Prince William County","SiteName":"County Website","link":"http://eservice2.pwcgov.org/eservices/procurement/Solicitations"},
+        {"County":"Manassas city","SiteName":"County Website","link":"http://www.manassascity.org/Bids.aspx"},
+        {"County":"Clarke County","SiteName":"County Website","link":"http://clarkecounty.gov/government/county-documents/finance/solicitations.html"},
+        {"County":"Warren County","SiteName":"County Website","link":"http://www.warrencountyva.net/government-2/agencies-public-information/procurement-opportunities.html"},
+        {"County":"City of Winchester","SiteName":"County Website","link":"https://www.winchesterva.gov/purchasing/itbrfp"},
+        {"County":"Frederick County","SiteName":"eVa","link":"https://eva.virginia.gov/"},
+        {"County":"Arlington County","SiteName":"eVa","link":"https://eva.virginia.gov/"},
+        {"County":"Page County","SiteName":"County Website","link":"http://www.pagecounty.virginia.gov/bids.aspx"},
+        {"County":"Rappahannock County","SiteName":"County Website","link":"http://www.rappahannockcountyva.gov/notices.html"},
+        {"County":"Culpeper County","SiteName":"County Website","link":"https://www.ebidexchange.com/SolicitationList.aspx?cid=90df3007-057b-4424-ac8e-f38a9cc07bef&uid=00000000-0000-0000-0000-000000000000"}]
+
+        
+        function myFunction(arr, countyName) {
+            var countyList = '<ul style="text-align: left;">'
+            var countyNewLink
+            var out = "";
+            var i;
+            for(i = 0; i < arr.length; i++) {                
+                if (arr[i].County == countyName) {
+                    countyNewLink = '<a href="' + arr[i].link + '"target="_blank">' + arr[i].SiteName + '</a><br>';
+                    countyList += '<li>' + countyNewLink + '</li>'; 
+                };                
+            };
+            countyList += '</ul>';
+            return countyList;
+        };
+
+        var counties = myFunction(vaJSON, countyName);
+        
+        
+        // Fills in the sidebar with the information from above
+        document.getElementById("results").innerHTML =  (clickedVal ?
+            '<br>' + countyName + '<br>' + counties +
+            '<br><br>' + stateAbb + '<br>' + list
+            : 'Hover over a county');
+    };
+
+    // Function that zoom to clicked county
+    function zoomToFeature(e) {
+        map.fitBounds(e.target.getBounds());
+    };
+
+    // actions that are triggered by mouse movement
+    function onEachFeature(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature,
+            mouseout: resetHighlight,
+            click: zoomToFeature,
+            click: updateResults,
+
+        });
+    }
+</script>
+
+
+
+</body>
+</html>
